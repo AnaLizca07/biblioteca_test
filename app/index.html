@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biblioteca - Frontend Simple</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 { text-align: center; color: #333; }
+        h2 { color: #555; border-bottom: 2px solid #ddd; padding-bottom: 10px; }
+        input, select, button {
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            border: none;
+            padding: 10px 15px;
+        }
+        button:hover { background-color: #0056b3; }
+        .book-item {
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+        .available { color: green; font-weight: bold; }
+        .unavailable { color: red; font-weight: bold; }
+        .message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            display: none;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>Biblioteca Bellaca</h1>
+
+    <div class="section">
+        <h2>Agregar libro</h2>
+        <div id="book-message" class="message"></div>
+        <form id="book-form">
+            <div>
+                <label>Título:</label><br>
+                <input type="text" id="book-title" required style="width: 100%;">
+            </div>
+            <div>
+                <label>Autor:</label><br>
+                <select id="book-author" required style="width: 100%;">
+                    <option value="">Selecciona autor</option>
+                </select>
+            </div>
+            <button type="submit">Agregar Libro</button>
+        </form>
+    </div>
+
+    <div class="section">
+        <h2>Préstamos</h2>
+        <div id="loan-message" class="message"></div>
+        
+        <h3>Crear préstamo</h3>
+        <form id="loan-form">
+            <div>
+                <label>Libro:</label><br>
+                <select id="loan-book" required style="width: 100%;">
+                    <option value="">Selecciona libro</option>
+                </select>
+            </div>
+            <div>
+                <label>Usuario:</label><br>
+                <input type="text" id="user-name" required style="width: 100%;">
+            </div>
+            <button type="submit">Crear préstamo</button>
+        </form>
+
+        <h3>Devolver libro</h3>
+        <form id="return-form">
+            <div>
+                <label>Préstamo:</label><br>
+                <select id="return-loan" required style="width: 100%;">
+                    <option value="">Selecciona préstamo</option>
+                </select>
+            </div>
+            <button type="submit">Devolver</button>
+        </form>
+    </div>
+
+    <div class="section">
+        <h2>Lista de Libros</h2>
+        <div id="books-list">Cargando...</div>
+    </div>
+
+    <script>
+        const API = 'http://localhost:8000';
+
+        function showMessage(id, text, type) {
+            const msg = document.getElementById(id);
+            msg.textContent = text;
+            msg.className = `message ${type}`;
+            msg.style.display = 'block';
+            setTimeout(() => msg.style.display = 'none', 3000);
+        }
+
+        async function loadAuthors() {
+            try {
+                const response = await fetch(`${API}/authors`);
+                const authors = await response.json();
+                const select = document.getElementById('book-author');
+                select.innerHTML = '<option value="">Selecciona autor</option>';
+                authors.forEach(author => {
+                    select.innerHTML += `<option value="${author.id}">${author.name}</option>`;
+                });
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        async function loadBooks() {
+            try {
+                const [booksRes, authorsRes] = await Promise.all([
+                    fetch(`${API}/books`),
+                    fetch(`${API}/authors`)
+                ]);
+                const books = await booksRes.json();
+                const authors = await authorsRes.json();
+                
+                const booksList = document.getElementById('books-list');
+                booksList.innerHTML = books.map(book => {
+                    const author = authors.find(a => a.id === book.author_id);
+                    return `
+                        <div class="book-item">
+                            <strong>${book.title}</strong><br>
+                            Autor: ${author ? author.name : 'Desconocido'}<br>
+                            Estado: <span class="${book.available ? 'available' : 'unavailable'}">
+                                ${book.available ? 'Disponible' : 'Prestado'}
+                            </span>
+                        </div>
+                    `;
+                }).join('');
+
+                const loanSelect = document.getElementById('loan-book');
+                loanSelect.innerHTML = '<option value="">Selecciona libro</option>';
+                books.filter(book => book.available).forEach(book => {
+                    loanSelect.innerHTML += `<option value="${book.id}">${book.title}</option>`;
+                });
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        async function loadLoans() {
+            try {
+                const [loansRes, booksRes] = await Promise.all([
+                    fetch(`${API}/loans`),
+                    fetch(`${API}/books`)
+                ]);
+                const loans = await loansRes.json();
+                const books = await booksRes.json();
+                
+                const returnSelect = document.getElementById('return-loan');
+                returnSelect.innerHTML = '<option value="">Selecciona préstamo</option>';
+                loans.forEach(loan => {
+                    const book = books.find(b => b.id === loan.book_id);
+                    returnSelect.innerHTML += `<option value="${loan.id}">${book ? book.title : 'Libro'} - ${loan.user_name}</option>`;
+                });
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        // Formulario agregar libro
+        document.getElementById('book-form').onsubmit = async (e) => {
+            e.preventDefault();
+            try {
+                const response = await fetch(`${API}/books`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title: document.getElementById('book-title').value,
+                        author_id: parseInt(document.getElementById('book-author').value)
+                    })
+                });
+                
+                if (response.ok) {
+                    showMessage('book-message', 'Libro agregado', 'success');
+                    e.target.reset();
+                    loadBooks();
+                } else {
+                    const error = await response.json();
+                    showMessage('book-message', error.detail, 'error');
+                }
+            } catch (error) {
+                showMessage('book-message', 'Error de conexión', 'error');
+            }
+        };
+
+        // Formulario crear préstamo
+        document.getElementById('loan-form').onsubmit = async (e) => {
+            e.preventDefault();
+            try {
+                const response = await fetch(`${API}/loans`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        book_id: parseInt(document.getElementById('loan-book').value),
+                        user_name: document.getElementById('user-name').value
+                    })
+                });
+                
+                if (response.ok) {
+                    showMessage('loan-message', 'Préstamo creado', 'success');
+                    e.target.reset();
+                    loadBooks();
+                    loadLoans();
+                } else {
+                    const error = await response.json();
+                    showMessage('loan-message', error.detail, 'error');
+                }
+            } catch (error) {
+                showMessage('loan-message', 'Error de conexión', 'error');
+            }
+        };
+
+        // Formulario devolver libro
+        document.getElementById('return-form').onsubmit = async (e) => {
+            e.preventDefault();
+            try {
+                const loanId = document.getElementById('return-loan').value;
+                const response = await fetch(`${API}/loans/${loanId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    showMessage('loan-message', 'Libro devuelto', 'success');
+                    e.target.reset();
+                    loadBooks();
+                    loadLoans();
+                } else {
+                    showMessage('loan-message', 'Error al devolver', 'error');
+                }
+            } catch (error) {
+                showMessage('loan-message', 'Error de conexión', 'error');
+            }
+        };
+
+        // Cargar datos al inicio
+        window.onload = () => {
+            loadAuthors();
+            loadBooks();
+            loadLoans();
+        };
+    </script>
+</body>
+</html>
