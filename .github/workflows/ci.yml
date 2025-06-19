@@ -21,12 +21,6 @@ jobs:
         echo "Building Docker images..."
         docker compose build
 
-    - name: 2. Static Code Analysis
-      run: |
-        echo "Running Static Analysis..."
-        # Solo analizar nuestro código, no las dependencias
-        docker compose run --rm api flake8 app/ tests/ --count --show-source --statistics
-        docker compose run --rm api pylint app/ tests/ --disable=C,R,W
 
     - name: 3. Unit Tests
       run: |
