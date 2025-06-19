@@ -32,3 +32,7 @@ git clone --depth 1 https://github.com/sqlmapproject/sqlmap.git sqlmap-dev (SQL 
 sqlmap -u "http://localhost:8000/authors/1" --level 3 --risk 3 --batch
 
 para ejecutar la imagen de docker y el docker compose a la vez docker compose up
+
+docker compose down -v  # Para limpiar todo primero
+docker compose build   # Para reconstruir con los cambios del Dockerfile
+docker compose up      # Para levantar los servicios

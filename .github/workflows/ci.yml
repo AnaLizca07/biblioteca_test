@@ -24,7 +24,8 @@ jobs:
     - name: 2. Static Code Analysis
       run: |
         echo "Running Static Analysis..."
-        docker compose run --rm api flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Solo analizar nuestro código, no las dependencias
+        docker compose run --rm api flake8 app/ tests/ --count --show-source --statistics
         docker compose run --rm api pylint app/ tests/ --disable=C,R,W
 
     - name: 3. Unit Tests
