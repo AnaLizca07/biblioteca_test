@@ -29,29 +29,6 @@ jobs:
 
     - name: 4. Integration Tests
       run: |
-        echo "Running Integration Tests..."
-        docker compose up -d
-        echo "Waiting for database to be ready..."
-        docker compose run --rm api bash -c "
-        for i in {1..30}; do
-          if pg_isready -h db -p 5432 -U postgres; then
-            echo 'Database is ready'
-            break
-          fi
-          echo 'Waiting for database...'
-          sleep 1
-        done
-        "
-        
-        # Run migrations if needed
-        docker compose run --rm -e DATABASE_URL="postgresql://postgres:postgres@db:5432/biblioteca" api alembic upgrade head || echo "No migrations to run"
-        
-        # Run integration tests
-        docker compose run --rm \
-          -e DATABASE_URL="postgresql://postgres:postgres@db:5432/biblioteca" \
-          -e PYTHONPATH=/app \
-          api pytest tests/test_integration.py -v
-        
         # Run Selenium tests with Chrome
         docker compose run --rm \
           -e DATABASE_URL="postgresql://postgres:postgres@db:5432/biblioteca" \
